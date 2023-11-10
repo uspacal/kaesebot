@@ -1,29 +1,35 @@
-import openai
+from openai import OpenAI
 import discord
 from discord.ext import commands
 import tiktoken
 import json
 
-
-def count_tokens(text, encoding_name='p50k_base'):
+def count_tokens(text, encoding_name='cl100k_base'):
     encoding = tiktoken.get_encoding(encoding_name)
     return len(encoding.encode(text))
 
 
-def openai_init(key: str):
-    openai.api_key = key
-
-
 def openai_request(prompt: str):
-    price_per_token = 0.02 / 1000
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=prompt,
-        max_tokens=4096 - count_tokens(prompt))
-
-    price = response.usage['total_tokens'] * price_per_token
-
-    return response.choices[0]['text'], price
+    client = OpenAI(
+        organization='<ORGANIZATION>',
+        api_key = '<API-KEY>'
+    )
+    assistent = "You are a helpful assistant."
+    prompt_token = count_tokens(prompt)
+    assistent_token = 17
+    price_per_token = 0.002 / 1000
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": assistent},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=4097 - prompt_token - assistent_token
+    )
+    
+    price = response.usage.total_tokens * price_per_token
+    
+    return response.choices[0].message.content, price
 
 
 async def send_long(ctx: discord.ext.commands.Context, message: str):
@@ -84,10 +90,8 @@ def check_channel(ctx: discord.ext.commands.Context, name):
 
 
 if __name__ == '__main__':
-    bot_token = 'DISCORD_BOT_TOKEN'
-    api_key = 'OPENAI_API_KEY'
-
-    openai_init(api_key)
+    bot_token = '<BOT_TOKEN>'
+    
     intents = discord.Intents.default()
     intents.reactions = True
     intents.messages = True
